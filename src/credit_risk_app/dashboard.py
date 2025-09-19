@@ -92,9 +92,8 @@ def create_shap_waterfall_plot(plot_data):
     explanation = shap.Explanation(
         values=shap_values_np, base_values=base_value, feature_names=feature_names
     )
-    fig, ax = plt.subplots(figsize=(10, 6))
+    plt.figure(figsize=(10, 6))
     shap.plots.waterfall(explanation, max_display=10, show=False)
-    return fig
 
 
 def create_bivariate_plot(plot_data, customer_features, feat_x, feat_y):
@@ -218,11 +217,10 @@ def display_shap_importance(api_data):
         with st.spinner("Génération du graphique SHAP..."):
             shap_data = api_data.get("shap_values")
             if shap_data:
-                fig_waterfall = create_shap_waterfall_plot(shap_data)
+                create_shap_waterfall_plot(shap_data)
                 buf = io.BytesIO()
-                fig_waterfall.savefig(buf, format="png", bbox_inches="tight", dpi=100)
+                plt.savefig(buf, format="png", bbox_inches="tight", dpi=100)
                 plot_placeholder.image(buf, use_container_width=True)
-                plt.close(fig_waterfall)
             else:
                 plot_placeholder.error("Données SHAP non disponibles.")
 

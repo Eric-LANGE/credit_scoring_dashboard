@@ -83,14 +83,14 @@ class DashboardService:
         if feat_x == feat_y:
             data_series = self.dashboard_data[feat_x].dropna()
             return {
-                "x_data": data_series.tolist(),
-                "y_data": data_series.tolist(),
+                "x_data": [x for x in data_series],
+                "y_data": [y for y in data_series],
             }
 
         # Original logic for different features
         features_to_get = [feat_x, feat_y]
         bivariate_df = self.dashboard_data[features_to_get].dropna()
         return {
-            "x_data": bivariate_df[feat_x].tolist(),
-            "y_data": bivariate_df[feat_y].tolist(),
+            "x_data": [x for x in bivariate_df[feat_x]],
+            "y_data": [y for y in bivariate_df[feat_y]],
         }

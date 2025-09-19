@@ -1,5 +1,3 @@
-# src/credit_risk_app/dashboard.py
-
 import streamlit as st
 import requests
 import io
@@ -10,6 +8,8 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import shap
 from pathlib import Path
+from io import BytesIO
+from PIL import Image
 
 # --- Constants ---
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -82,6 +82,44 @@ def load_distribution_data(feature_name):
         return None
 
 
+# --- Image & Layout Stabilization Helpers ---
+# Pistes appliquées : container/placeholder + dimensions fixes + cache bytes
+STABLE_BOX_H_SMALL = 260  # px (metrics/plots compacts)
+STABLE_BOX_H_MED = 380  # px (plots matplotlib)
+IMG_WIDTH_SMALL = 360  # px
+IMG_WIDTH_MED = 720  # px
+
+
+@st.cache_data(show_spinner=False)
+def load_image_file_bytes(path_str: str) -> bytes:
+    p = Path(path_str)
+    with open(p, "rb") as f:
+        return f.read()
+
+
+def stable_image_box_begin(height_px: int):
+    st.markdown(
+        f"""
+        <style>
+        .stable-image-box {{
+            display:flex;align-items:center;justify-content:center;
+            height:{height_px}px;overflow:hidden;
+        }}
+        /* Optionnel : fige (approximativement) la largeur de la sidebar pour limiter les reflows */
+        section[data-testid="stSidebar"] > div:first-child {{
+            min-width: 300px; max-width: 300px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="stable-image-box">', unsafe_allow_html=True)
+
+
+def stable_image_box_end():
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 # --- Plot Generation Functions ---
 def create_shap_waterfall_plot(plot_data):
     if plot_data is None:
@@ -94,6 +132,8 @@ def create_shap_waterfall_plot(plot_data):
     )
     plt.figure(figsize=(10, 6))
     shap.plots.waterfall(explanation, max_display=10, show=False)
+    fig = plt.gcf()
+    return fig
 
 
 def create_bivariate_plot(plot_data, customer_features, feat_x, feat_y):
@@ -113,7 +153,6 @@ def create_bivariate_plot(plot_data, customer_features, feat_x, feat_y):
         )
     ax.set_xlabel(feat_x)
     ax.set_ylabel(feat_y)
-    # **FIX:** Removed the title
     return fig
 
 
@@ -210,19 +249,30 @@ def display_shap_importance(api_data):
     col_g, col_l = st.columns([1.15, 1])
     with col_g:
         st.subheader("Importance Globale")
-        st.image(str(SHAP_IMAGE_PATH), use_container_width=True)
+        # --- Stable box + width fixe (anti reflow/resize) ---
+        stable_image_box_begin(STABLE_BOX_H_MED)
+        placeholder_global = st.empty()
+        beeswarm_bytes = load_image_file_bytes(str(SHAP_IMAGE_PATH))
+        placeholder_global.image(
+            Image.open(BytesIO(beeswarm_bytes)), width=IMG_WIDTH_MED
+        )
+        stable_image_box_end()
     with col_l:
         st.subheader("Importance Locale")
+        # --- Stable box + placeholder (évite le "blink") ---
+        stable_image_box_begin(STABLE_BOX_H_MED)
         plot_placeholder = st.empty()
         with st.spinner("Génération du graphique SHAP..."):
             shap_data = api_data.get("shap_values")
             if shap_data:
-                create_shap_waterfall_plot(shap_data)
+                fig = create_shap_waterfall_plot(shap_data)
                 buf = io.BytesIO()
-                plt.savefig(buf, format="png", bbox_inches="tight", dpi=100)
-                plot_placeholder.image(buf, use_container_width=True)
+                fig.savefig(buf, format="png", bbox_inches="tight", dpi=100)
+                plt.close(fig)
+                plot_placeholder.image(buf, width=IMG_WIDTH_MED)
             else:
                 plot_placeholder.error("Données SHAP non disponibles.")
+        stable_image_box_end()
 
 
 def display_customer_positioning(customer_features):
@@ -243,7 +293,10 @@ def display_customer_positioning(customer_features):
                     customer_features.get(feature_dist),
                     feature_name=feature_dist,
                 )
-                st.image(fig_to_bytes(fig_dist), use_container_width=True)
+                stable_image_box_begin(STABLE_BOX_H_MED)
+                dist_placeholder = st.empty()
+                dist_placeholder.image(fig_to_bytes(fig_dist), width=IMG_WIDTH_MED)
+                stable_image_box_end()
             else:
                 st.error("Impossible de charger les données de distribution.")
 
@@ -259,7 +312,10 @@ def display_customer_positioning(customer_features):
                 fig_bi = create_bivariate_plot(
                     bivariate_data, customer_features, feat_x, feat_y
                 )
-                st.image(fig_to_bytes(fig_bi), use_container_width=True)
+                stable_image_box_begin(STABLE_BOX_H_MED)
+                bi_placeholder = st.empty()
+                bi_placeholder.image(fig_to_bytes(fig_bi), width=IMG_WIDTH_MED)
+                stable_image_box_end()
             else:
                 st.error("Impossible de générer le graphique bi-varié.")
 

@@ -24,7 +24,6 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER ./plots /app/plots
 
 # Copy test files (optional, can be removed for a smaller production image)
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./tests /app/tests
-COPY --chown=$MAMBA_USER:$MAMBA_USER ./pytest.ini /app/pytest.ini
 
 # Copy and set executable permissions for the entrypoint script
 COPY --chown=$MAMBA_USER:$MAMBA_USER --chmod=755 entrypoint.sh /app/

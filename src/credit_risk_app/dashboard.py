@@ -4,7 +4,6 @@ import io
 import json
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import shap
 from pathlib import Path
@@ -21,13 +20,24 @@ st.set_page_config(layout="wide", page_title="Dashboard Score Crédit")
 
 API_URL = "http://127.0.0.1:8000"
 
+# --- Global font sizing (Matplotlib) ---
+GLOBAL_FONT_SIZE = 11
+plt.rcParams.update(
+    {
+        "font.size": GLOBAL_FONT_SIZE,
+        "axes.titlesize": GLOBAL_FONT_SIZE + 1,
+        "axes.labelsize": GLOBAL_FONT_SIZE,
+        "xtick.labelsize": GLOBAL_FONT_SIZE,
+        "ytick.labelsize": GLOBAL_FONT_SIZE,
+        "legend.fontsize": GLOBAL_FONT_SIZE,
+    }
+)
 
 # --- API & Data Communication Functions ---
 
 
 @st.cache_data(ttl=3600)
 def get_customer_ids():
-    """Fetches the list of all customer IDs from the API."""
     try:
         response = requests.get(f"{API_URL}/customers")
         response.raise_for_status()
@@ -38,7 +48,6 @@ def get_customer_ids():
 
 
 def get_api_data_for_customer(customer_id):
-    """Fetches all necessary data from the new, specific API endpoints."""
     try:
         score_res = requests.get(f"{API_URL}/customer/{customer_id}/score")
         features_res = requests.get(f"{API_URL}/customer/{customer_id}/features")
@@ -60,7 +69,6 @@ def get_api_data_for_customer(customer_id):
 
 @st.cache_data(ttl=3600)
 def get_bivariate_data_from_api(feat_x, feat_y):
-    """Fetches data for the bi-variate scatter plot."""
     try:
         response = requests.get(
             f"{API_URL}/features/bivariate_data?feat_x={feat_x}&feat_y={feat_y}"
@@ -73,7 +81,6 @@ def get_bivariate_data_from_api(feat_x, feat_y):
 
 @st.cache_data(ttl=3600)
 def load_distribution_data(feature_name):
-    """Loads histogram data directly from the static JSON file."""
     file_path = PLOTS_DIR / f"{feature_name}_hist_data.json"
     try:
         with open(file_path, "r") as f:
@@ -83,10 +90,6 @@ def load_distribution_data(feature_name):
 
 
 # --- Image & Layout Stabilization Helpers ---
-# V2 : boîtes stables *responsives* (aspect-ratio + clamp) pour limiter l'espace vide
-# et éviter les reflows, tout en s'adaptant aux petits/grands écrans.
-
-
 @st.cache_data(show_spinner=False)
 def load_image_file_bytes(path_str: str) -> bytes:
     p = Path(path_str)
@@ -101,34 +104,34 @@ def _inject_stable_css_once():
     st.markdown(
         """
         <style>
-        /* Boîtes stables responsives : évite le "shake" sans grands espaces vides */
         .stable-image-box {
-            position: relative;
-            width: 100%;
-            /* Hauteur responsive :
-               - min 220px
-               - cible ~ 38vh
-               - max 520px
-            */
-            height: clamp(220px, 38vh, 520px);
-            aspect-ratio: 16 / 9;
-            overflow: hidden;
-            display: block;
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+          display: block;
         }
         .stable-image-box > img, .stable-image-box img {
-            position: absolute; inset: 0;
-            width: 100%; height: 100%;
-            object-fit: contain; /* pas de crop, pas de déformation */
+          position: absolute; inset: 0;
+          width: 100%; height: 100%;
+          object-fit: contain;
         }
-        /* Variante compacte pour les vignettes/plots plus petits */
         .stable-image-box.small {
-            height: clamp(200px, 32vh, 420px);
-            aspect-ratio: 4 / 3;
+          height: clamp(200px, 30vh, 380px);
+          aspect-ratio: 16 / 7;
         }
-        /* Sidebar figée seulement sur grands écrans (évite gêne mobile) */
+        .stable-image-box.medium {
+          height: clamp(220px, 38vh, 520px);
+          aspect-ratio: 16 / 9;
+        }
+        .stable-image-box.large {
+          height: clamp(240px, 40vh, 560px);
+          aspect-ratio: 2 / 1;
+          width: 97%;
+          margin-left: 3%;
+        }
         @media (min-width: 1000px) {
           section[data-testid="stSidebar"] > div:first-child {
-              min-width: 300px; max-width: 300px;
+            min-width: 300px; max-width: 300px;
           }
         }
         </style>
@@ -137,9 +140,11 @@ def _inject_stable_css_once():
     )
 
 
-def stable_image_box_begin(small: bool = False):
+def stable_image_box_begin(size: str = "medium"):
     _inject_stable_css_once()
-    cls = "stable-image-box small" if small else "stable-image-box"
+    if size not in {"small", "medium", "large"}:
+        size = "medium"
+    cls = f"stable-image-box {size}"
     st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
 
 
@@ -164,7 +169,7 @@ def create_shap_waterfall_plot(plot_data):
 
 
 def create_bivariate_plot(plot_data, customer_features, feat_x, feat_y):
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(12.8, 7.2))  # 16:9
     ax.scatter(plot_data["x_data"], plot_data["y_data"], alpha=0.1, color="grey")
     if (
         customer_features.get(feat_x) is not None
@@ -184,7 +189,7 @@ def create_bivariate_plot(plot_data, customer_features, feat_x, feat_y):
 
 
 def create_distribution_plot(counts, bin_edges, median_val, client_value, feature_name):
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(12.8, 7.2))  # 16:9
     ax.bar(
         bin_edges[:-1],
         counts,
@@ -193,13 +198,27 @@ def create_distribution_plot(counts, bin_edges, median_val, client_value, featur
         color="lightgrey",
         edgecolor="grey",
     )
+    is_integer_feature = feature_name in {"DAYS_EMPLOYED", "OWN_CAR_AGE"}
+
+    def _fmt_val(v):
+        if is_integer_feature:
+            try:
+                return f"{int(round(v))}"
+            except Exception:
+                return f"{v}"
+        else:
+            try:
+                return f"{v:,.2f}"
+            except Exception:
+                return f"{v}"
+
     if pd.notna(median_val):
         ax.axvline(
             median_val,
             color="black",
             linestyle="--",
             linewidth=2,
-            label=f"Median: {median_val:,.2f}",
+            label=f"Median: {_fmt_val(median_val)}",
         )
     if client_value is not None:
         ax.axvline(
@@ -207,7 +226,7 @@ def create_distribution_plot(counts, bin_edges, median_val, client_value, featur
             color="red",
             linestyle="--",
             lw=3,
-            label=f"Client : {client_value:.2f}",
+            label=f"Client : {_fmt_val(client_value)}",
         )
     ax.legend()
     ax.set_xlabel(feature_name, fontsize=11)
@@ -215,11 +234,103 @@ def create_distribution_plot(counts, bin_edges, median_val, client_value, featur
     return fig
 
 
+def create_matplotlib_gauge(value: float, threshold: float, decision: str):
+    value = max(0, min(100, float(value)))
+    threshold = max(0, min(100, float(threshold)))
+
+    fig = plt.figure(figsize=(12, 5))
+    ax = fig.add_subplot(111)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    center = (0, 0)
+    R_outer = 1.0
+    R_inner = 0.72
+    color_bar = "green" if decision == "accepted" else "red"
+
+    from matplotlib.patches import Wedge
+
+    # Segment de valeur
+    start_angle = 180 - (value / 100.0) * 180.0
+    val = Wedge(
+        center,
+        R_outer,
+        start_angle,
+        180,
+        width=(R_outer - R_inner),
+        facecolor=color_bar,
+        edgecolor=color_bar,
+    )
+    ax.add_patch(val)
+
+    th_angle = 180 - (threshold / 100.0) * 180.0
+    import numpy as _np
+
+    th_rad = _np.deg2rad(th_angle)
+    x_out, y_out = R_outer * _np.cos(th_rad), R_outer * _np.sin(th_rad)
+    x_in, y_in = R_inner * _np.cos(th_rad), R_inner * _np.sin(th_rad)
+    ax.plot([x_in, x_out], [y_in, y_out], color="black", lw=3)
+
+    # Libellé du seuil en 2 lignes, avec plus d'espace par rapport à la barre
+    r_label = R_inner + (R_outer - R_inner) * 0.90
+    tx = r_label * _np.cos(th_rad)
+    ty = r_label * _np.sin(th_rad)
+    ax.text(
+        tx,
+        ty + 0.12,  # "Seuil" au-dessus
+        "Seuil",
+        ha="center",
+        va="bottom",
+        fontsize=12,
+        color="#555555",
+    )
+    ax.text(
+        tx,
+        ty + 0.07,  # puis la valeur juste en dessous
+        f"{threshold:.1f}%",
+        ha="center",
+        va="bottom",
+        fontsize=12,
+        color="#555555",
+    )
+
+    # Valeur centrale
+    ax.text(
+        0,
+        -0.10,
+        f"{value:.1f}%",
+        ha="center",
+        va="center",
+        fontsize=30,
+        color="#4a5568",
+    )
+
+    for t in [0, 20, 40, 60, 80, 100]:
+        a = 180 - (t / 100.0) * 180.0
+        r0, r1 = R_outer * 0.96, R_outer
+        ar = _np.deg2rad(a)
+        ax.plot(
+            [r0 * _np.cos(ar), r1 * _np.cos(ar)],
+            [r0 * _np.sin(ar), r1 * _np.sin(ar)],
+            color="#9e9e9e",
+            lw=1,
+        )
+        tx_t = (R_outer * 1.06) * _np.cos(ar)
+        ty_t = (R_outer * 1.06) * _np.sin(ar)
+        ax.text(
+            tx_t, ty_t, f"{t}", ha="center", va="center", fontsize=12, color="#6b7280"
+        )
+
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-0.25, 1.2)
+    fig.tight_layout(pad=0.5)
+    return fig
+
+
 # --- UI Display Functions ---
 
 
 def display_score_and_features(api_data, customer_id):
-    # **FIX:** Add customer ID to the header
     st.header(f"Analyse Client : {customer_id}")
     score_data = api_data.get("score_data")
     customer_features = api_data.get("features")
@@ -229,25 +340,12 @@ def display_score_and_features(api_data, customer_id):
     with col1:
         st.subheader("Score de Crédit")
         gauge_threshold = (1 - score_data["threshold"]) * 100
-        bar_color = "green" if score_data["decision"] == "accepted" else "red"
-        fig_gauge = go.Figure(
-            go.Indicator(
-                mode="gauge+number",
-                value=score,
-                title={"text": f"Seuil : {gauge_threshold:.2f}%", "font": {"size": 16}},
-                gauge={
-                    "axis": {"range": [None, 100]},
-                    "bar": {"color": bar_color},
-                    "threshold": {
-                        "line": {"color": "black", "width": 3},
-                        "thickness": 0.8,
-                        "value": gauge_threshold,
-                    },
-                },
-            )
+        stable_image_box_begin(size="large")
+        fig_g = create_matplotlib_gauge(
+            value=score, threshold=gauge_threshold, decision=score_data["decision"]
         )
-        fig_gauge.update_layout(margin=dict(l=20, r=20, t=70, b=20))
-        st.plotly_chart(fig_gauge, use_container_width=True)
+        st.image(fig_to_bytes(fig_g))
+        stable_image_box_end()
 
     with col2:
         st.subheader("Caractéristiques Principales")
@@ -276,17 +374,14 @@ def display_shap_importance(api_data):
     col_g, col_l = st.columns([1.15, 1])
     with col_g:
         st.subheader("Importance Globale")
-        # --- Stable box responsive (anti reflow/resize + moins d'espace vide) ---
-        stable_image_box_begin(small=False)
+        stable_image_box_begin(size="medium")
         placeholder_global = st.empty()
         beeswarm_bytes = load_image_file_bytes(str(SHAP_IMAGE_PATH))
-        # Pas de width fixe : la taille est pilotée par CSS (object-fit: contain)
         placeholder_global.image(Image.open(BytesIO(beeswarm_bytes)))
         stable_image_box_end()
     with col_l:
         st.subheader("Importance Locale")
-        # --- Stable box responsive + placeholder (évite le "blink") ---
-        stable_image_box_begin(small=False)
+        stable_image_box_begin(size="medium")
         plot_placeholder = st.empty()
         with st.spinner("Génération du graphique SHAP..."):
             shap_data = api_data.get("shap_values")
@@ -295,7 +390,7 @@ def display_shap_importance(api_data):
                 buf = io.BytesIO()
                 fig.savefig(buf, format="png", bbox_inches="tight", dpi=110)
                 plt.close(fig)
-                plot_placeholder.image(buf)  # taille contrôlée par CSS
+                plot_placeholder.image(buf)
             else:
                 plot_placeholder.error("Données SHAP non disponibles.")
         stable_image_box_end()
@@ -319,7 +414,7 @@ def display_customer_positioning(customer_features):
                     customer_features.get(feature_dist),
                     feature_name=feature_dist,
                 )
-                stable_image_box_begin(small=False)
+                stable_image_box_begin(size="medium")
                 dist_placeholder = st.empty()
                 dist_placeholder.image(fig_to_bytes(fig_dist))
                 stable_image_box_end()
@@ -338,7 +433,7 @@ def display_customer_positioning(customer_features):
                 fig_bi = create_bivariate_plot(
                     bivariate_data, customer_features, feat_x, feat_y
                 )
-                stable_image_box_begin(small=False)
+                stable_image_box_begin(size="medium")
                 bi_placeholder = st.empty()
                 bi_placeholder.image(fig_to_bytes(fig_bi))
                 stable_image_box_end()
@@ -347,7 +442,6 @@ def display_customer_positioning(customer_features):
 
 
 def fig_to_bytes(fig):
-    """Converts a matplotlib figure to a bytes object for Streamlit."""
     buf = io.BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight", dpi=100)
     plt.close(fig)
@@ -369,7 +463,6 @@ else:
             api_data = get_api_data_for_customer(selected_id)
 
         if api_data:
-            # **FIX:** Pass the selected_id to the display function
             display_score_and_features(api_data, selected_id)
             st.markdown("---")
             display_shap_importance(api_data)

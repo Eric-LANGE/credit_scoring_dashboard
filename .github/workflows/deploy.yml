@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,28 +15,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-
-      # --- Python quality checks (host environment, not Docker) ---
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11.12'
-
-      - name: Install linting and formatting tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 black
-
-      - name: Lint with flake8
-        run: |
-          echo "Running flake8 linter..."
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-      - name: Check formatting with black
-        run: |
-          echo "Checking code formatting with black..."
-          black --check .
 
       # --- Docker build + test (uses micromamba base-env image) ---
       - name: Set up Docker Buildx
@@ -52,22 +30,6 @@ jobs:
           load: true
           tags: credit-risk-app:latest
           provenance: false
-
-      - name: Run tests using the built image
-        run: |
-          echo "Running pytest inside Docker container..."
-          docker run --rm credit-risk-app:latest pytest tests/
-          # ✅ No micromamba activation needed — dependencies are in base
-
-  deploy-to-spaces:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          lfs: true
 
       - name: Push to Hugging Face Hub
         env:

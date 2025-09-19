@@ -3,8 +3,6 @@ import logging
 import numpy as np
 import pandas as pd
 from typing import List
-from pathlib import Path
-import mlflow
 
 # Initialize a logger for this module
 logger = logging.getLogger(__name__)
@@ -274,40 +272,3 @@ def _cast_numeric_to_float(df: pd.DataFrame) -> None:
         logger.debug(
             "No columns required casting to float64, or all numeric columns were already float64/handled."
         )
-
-
-def load_and_preprocess_all():
-    """
-    Loads the entire test dataset, preprocesses it using the existing
-    transformation pipeline, and returns the processed DataFrame.
-    This is a helper function specifically for the dashboard's needs.
-    """
-    logger.info("Starting batch preprocessing for the entire test set...")
-
-    # 1. Construct the correct model and data paths, replicating the logic from main.py
-    base_dir = Path(__file__).resolve().parent
-    model_path = base_dir / ".." / ".." / "models" / "gradient_boosting"
-    test_data_path = base_dir / ".." / ".." / "data" / "application_test.csv"
-
-    # 2. Load the model to get expected features from its signature
-    try:
-        model = mlflow.pyfunc.load_model(model_path)
-        signature_inputs = model.metadata.get_input_schema().input_names()
-        logger.info(
-            f"Loaded model. Expected features from signature: {len(signature_inputs)}"
-        )
-    except Exception as e:
-        logger.error(f"Failed to load model for feature schema: {e}")
-        raise
-
-    # 3. Load the raw test data
-    test_df = pd.read_csv(test_data_path)
-    test_df.set_index("SK_ID_CURR", inplace=True)
-
-    # 4. Apply the existing transformations
-    processed_df = apply_transformations(test_df, signature_inputs)
-    logger.info(
-        f"Batch preprocessing complete. Shape of processed data: {processed_df.shape}"
-    )
-
-    return processed_df

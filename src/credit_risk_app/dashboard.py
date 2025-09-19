@@ -83,11 +83,8 @@ def load_distribution_data(feature_name):
 
 
 # --- Image & Layout Stabilization Helpers ---
-# Pistes appliquées : container/placeholder + dimensions fixes + cache bytes
-STABLE_BOX_H_SMALL = 260  # px (metrics/plots compacts)
-STABLE_BOX_H_MED = 380  # px (plots matplotlib)
-IMG_WIDTH_SMALL = 360  # px
-IMG_WIDTH_MED = 720  # px
+# V2 : boîtes stables *responsives* (aspect-ratio + clamp) pour limiter l'espace vide
+# et éviter les reflows, tout en s'adaptant aux petits/grands écrans.
 
 
 @st.cache_data(show_spinner=False)
@@ -97,23 +94,53 @@ def load_image_file_bytes(path_str: str) -> bytes:
         return f.read()
 
 
-def stable_image_box_begin(height_px: int):
+def _inject_stable_css_once():
+    if st.session_state.get("_stable_css_injected"):
+        return
+    st.session_state["_stable_css_injected"] = True
     st.markdown(
-        f"""
+        """
         <style>
-        .stable-image-box {{
-            display:flex;align-items:center;justify-content:center;
-            height:{height_px}px;overflow:hidden;
-        }}
-        /* Optionnel : fige (approximativement) la largeur de la sidebar pour limiter les reflows */
-        section[data-testid="stSidebar"] > div:first-child {{
-            min-width: 300px; max-width: 300px;
-        }}
+        /* Boîtes stables responsives : évite le "shake" sans grands espaces vides */
+        .stable-image-box {
+            position: relative;
+            width: 100%;
+            /* Hauteur responsive :
+               - min 220px
+               - cible ~ 38vh
+               - max 520px
+            */
+            height: clamp(220px, 38vh, 520px);
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            display: block;
+        }
+        .stable-image-box > img, .stable-image-box img {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: contain; /* pas de crop, pas de déformation */
+        }
+        /* Variante compacte pour les vignettes/plots plus petits */
+        .stable-image-box.small {
+            height: clamp(200px, 32vh, 420px);
+            aspect-ratio: 4 / 3;
+        }
+        /* Sidebar figée seulement sur grands écrans (évite gêne mobile) */
+        @media (min-width: 1000px) {
+          section[data-testid="stSidebar"] > div:first-child {
+              min-width: 300px; max-width: 300px;
+          }
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="stable-image-box">', unsafe_allow_html=True)
+
+
+def stable_image_box_begin(small: bool = False):
+    _inject_stable_css_once()
+    cls = "stable-image-box small" if small else "stable-image-box"
+    st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
 
 
 def stable_image_box_end():
@@ -249,27 +276,26 @@ def display_shap_importance(api_data):
     col_g, col_l = st.columns([1.15, 1])
     with col_g:
         st.subheader("Importance Globale")
-        # --- Stable box + width fixe (anti reflow/resize) ---
-        stable_image_box_begin(STABLE_BOX_H_MED)
+        # --- Stable box responsive (anti reflow/resize + moins d'espace vide) ---
+        stable_image_box_begin(small=False)
         placeholder_global = st.empty()
         beeswarm_bytes = load_image_file_bytes(str(SHAP_IMAGE_PATH))
-        placeholder_global.image(
-            Image.open(BytesIO(beeswarm_bytes)), width=IMG_WIDTH_MED
-        )
+        # Pas de width fixe : la taille est pilotée par CSS (object-fit: contain)
+        placeholder_global.image(Image.open(BytesIO(beeswarm_bytes)))
         stable_image_box_end()
     with col_l:
         st.subheader("Importance Locale")
-        # --- Stable box + placeholder (évite le "blink") ---
-        stable_image_box_begin(STABLE_BOX_H_MED)
+        # --- Stable box responsive + placeholder (évite le "blink") ---
+        stable_image_box_begin(small=False)
         plot_placeholder = st.empty()
         with st.spinner("Génération du graphique SHAP..."):
             shap_data = api_data.get("shap_values")
             if shap_data:
                 fig = create_shap_waterfall_plot(shap_data)
                 buf = io.BytesIO()
-                fig.savefig(buf, format="png", bbox_inches="tight", dpi=100)
+                fig.savefig(buf, format="png", bbox_inches="tight", dpi=110)
                 plt.close(fig)
-                plot_placeholder.image(buf, width=IMG_WIDTH_MED)
+                plot_placeholder.image(buf)  # taille contrôlée par CSS
             else:
                 plot_placeholder.error("Données SHAP non disponibles.")
         stable_image_box_end()
@@ -293,9 +319,9 @@ def display_customer_positioning(customer_features):
                     customer_features.get(feature_dist),
                     feature_name=feature_dist,
                 )
-                stable_image_box_begin(STABLE_BOX_H_MED)
+                stable_image_box_begin(small=False)
                 dist_placeholder = st.empty()
-                dist_placeholder.image(fig_to_bytes(fig_dist), width=IMG_WIDTH_MED)
+                dist_placeholder.image(fig_to_bytes(fig_dist))
                 stable_image_box_end()
             else:
                 st.error("Impossible de charger les données de distribution.")
@@ -312,9 +338,9 @@ def display_customer_positioning(customer_features):
                 fig_bi = create_bivariate_plot(
                     bivariate_data, customer_features, feat_x, feat_y
                 )
-                stable_image_box_begin(STABLE_BOX_H_MED)
+                stable_image_box_begin(small=False)
                 bi_placeholder = st.empty()
-                bi_placeholder.image(fig_to_bytes(fig_bi), width=IMG_WIDTH_MED)
+                bi_placeholder.image(fig_to_bytes(fig_bi))
                 stable_image_box_end()
             else:
                 st.error("Impossible de générer le graphique bi-varié.")

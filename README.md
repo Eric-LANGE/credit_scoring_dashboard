@@ -1,5 +1,5 @@
 ---
-title: Credit Risk Dashboard
+title: Credit Risk App Streamlit
 emoji: 📊
 colorFrom: blue
 colorTo: green

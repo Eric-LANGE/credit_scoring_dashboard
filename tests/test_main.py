@@ -2,15 +2,22 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-# Mock the service before importing the app
-# This ensures the app uses our mock during initialization
+# Import the app and the dependency we want to override
+from src.credit_risk_app.main import app, get_dashboard_service
+
+# Create a mock instance of the service
 mock_service_instance = MagicMock()
-with patch(
-    "src.credit_risk_app.main.DashboardService", return_value=mock_service_instance
-):
-    from src.credit_risk_app.main import app
+
+
+# Create an override function that returns our mock instance
+def override_get_dashboard_service():
+    return mock_service_instance
+
+
+# Apply the override to the FastAPI app
+app.dependency_overrides[get_dashboard_service] = override_get_dashboard_service
 
 
 @pytest.fixture

@@ -7,8 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import shap
 from pathlib import Path
-from io import BytesIO
-from PIL import Image
+import base64
 
 # --- Constants ---
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -21,7 +20,7 @@ st.set_page_config(layout="wide", page_title="Dashboard Score Crédit")
 API_URL = "http://127.0.0.1:8000"
 
 # --- Global font sizing (Matplotlib) ---
-GLOBAL_FONT_SIZE = 11
+GLOBAL_FONT_SIZE = 12
 plt.rcParams.update(
     {
         "font.size": GLOBAL_FONT_SIZE,
@@ -33,9 +32,8 @@ plt.rcParams.update(
     }
 )
 
+
 # --- API & Data Communication Functions ---
-
-
 @st.cache_data(ttl=3600)
 def get_customer_ids():
     try:
@@ -110,22 +108,30 @@ def _inject_stable_css_once():
           overflow: hidden;
           display: block;
         }
-        .stable-image-box > img, .stable-image-box img {
+        .stable-image-box > img, .stable-image-box img, .stable-image-box .stable-img {
           position: absolute; inset: 0;
           width: 100%; height: 100%;
           object-fit: contain;
         }
+        /* Variantes de taille (hauteur responsive + ratio)
+           NOTE: on supprime le 'vh' pour éviter le décalage au tout 1er rendu
+                 (iframe/viewport pas stabilisé) */
         .stable-image-box.small {
-          height: clamp(200px, 30vh, 380px);
+          /* Hauteur pilotée par le ratio; bornes px pour la stabilité init */
+          min-height: 200px;
+          max-height: 380px;
           aspect-ratio: 16 / 7;
         }
         .stable-image-box.medium {
-          height: clamp(220px, 38vh, 520px);
+          min-height: 220px;
+          max-height: 520px;
           aspect-ratio: 16 / 9;
         }
         .stable-image-box.large {
-          height: clamp(240px, 40vh, 560px);
+          min-height: 240px;
+          max-height: 560px;
           aspect-ratio: 2 / 1;
+          /* léger décalage visuel à droite + occupation de l'espace */
           width: 97%;
           margin-left: 3%;
         }
@@ -140,16 +146,23 @@ def _inject_stable_css_once():
     )
 
 
-def stable_image_box_begin(size: str = "medium"):
+def render_png_in_stable_box(img_bytes: bytes, size: str = "medium"):
+    """
+    Rend l'image *à l'intérieur* de la boîte stable en un seul bloc,
+    pour éviter la fragmentation DOM au 1er rendu.
+    """
     _inject_stable_css_once()
     if size not in {"small", "medium", "large"}:
         size = "medium"
-    cls = f"stable-image-box {size}"
-    st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-
-
-def stable_image_box_end():
-    st.markdown("</div>", unsafe_allow_html=True)
+    b64 = base64.b64encode(img_bytes).decode("ascii")
+    st.markdown(
+        f"""
+        <div class="stable-image-box {size}">
+          <img class="stable-img" alt="plot" src="data:image/png;base64,{b64}"/>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # --- Plot Generation Functions ---
@@ -328,8 +341,6 @@ def create_matplotlib_gauge(value: float, threshold: float, decision: str):
 
 
 # --- UI Display Functions ---
-
-
 def display_score_and_features(api_data, customer_id):
     st.header(f"Analyse Client : {customer_id}")
     score_data = api_data.get("score_data")
@@ -340,12 +351,10 @@ def display_score_and_features(api_data, customer_id):
     with col1:
         st.subheader("Score de Crédit")
         gauge_threshold = (1 - score_data["threshold"]) * 100
-        stable_image_box_begin(size="large")
         fig_g = create_matplotlib_gauge(
             value=score, threshold=gauge_threshold, decision=score_data["decision"]
         )
-        st.image(fig_to_bytes(fig_g))
-        stable_image_box_end()
+        render_png_in_stable_box(fig_to_bytes(fig_g), size="large")
 
     with col2:
         st.subheader("Caractéristiques Principales")
@@ -374,15 +383,10 @@ def display_shap_importance(api_data):
     col_g, col_l = st.columns([1.15, 1])
     with col_g:
         st.subheader("Importance Globale")
-        stable_image_box_begin(size="medium")
-        placeholder_global = st.empty()
         beeswarm_bytes = load_image_file_bytes(str(SHAP_IMAGE_PATH))
-        placeholder_global.image(Image.open(BytesIO(beeswarm_bytes)))
-        stable_image_box_end()
+        render_png_in_stable_box(beeswarm_bytes, size="medium")
     with col_l:
         st.subheader("Importance Locale")
-        stable_image_box_begin(size="medium")
-        plot_placeholder = st.empty()
         with st.spinner("Génération du graphique SHAP..."):
             shap_data = api_data.get("shap_values")
             if shap_data:
@@ -390,10 +394,9 @@ def display_shap_importance(api_data):
                 buf = io.BytesIO()
                 fig.savefig(buf, format="png", bbox_inches="tight", dpi=110)
                 plt.close(fig)
-                plot_placeholder.image(buf)
+                render_png_in_stable_box(buf.getvalue(), size="medium")
             else:
-                plot_placeholder.error("Données SHAP non disponibles.")
-        stable_image_box_end()
+                st.error("Données SHAP non disponibles.")
 
 
 def display_customer_positioning(customer_features):
@@ -414,10 +417,7 @@ def display_customer_positioning(customer_features):
                     customer_features.get(feature_dist),
                     feature_name=feature_dist,
                 )
-                stable_image_box_begin(size="medium")
-                dist_placeholder = st.empty()
-                dist_placeholder.image(fig_to_bytes(fig_dist))
-                stable_image_box_end()
+                render_png_in_stable_box(fig_to_bytes(fig_dist), size="medium")
             else:
                 st.error("Impossible de charger les données de distribution.")
 
@@ -433,10 +433,7 @@ def display_customer_positioning(customer_features):
                 fig_bi = create_bivariate_plot(
                     bivariate_data, customer_features, feat_x, feat_y
                 )
-                stable_image_box_begin(size="medium")
-                bi_placeholder = st.empty()
-                bi_placeholder.image(fig_to_bytes(fig_bi))
-                stable_image_box_end()
+                render_png_in_stable_box(fig_to_bytes(fig_bi), size="medium")
             else:
                 st.error("Impossible de générer le graphique bi-varié.")
 

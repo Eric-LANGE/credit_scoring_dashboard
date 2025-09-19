@@ -21,6 +21,7 @@ dependencies:
   - pydantic
 
   # --- Model Interpretation ---
+  - matplotlib
   - shap
 
   # --- Development & Testing ---

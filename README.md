@@ -1,5 +1,5 @@
 ---
-title: Credit Risk App Streamlit
+title: credit-risk-app-streamlit
 emoji: 📊
 colorFrom: blue
 colorTo: green

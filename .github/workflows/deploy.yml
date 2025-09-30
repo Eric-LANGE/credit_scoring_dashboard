@@ -37,7 +37,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
         run: |
-          SPACE_NAME="p8_streamlit"
+          SPACE_NAME="p8_dashboard"
           GIT_BRANCH="main"
 
           echo "Pushing to Hugging Face Space: $HF_USERNAME/$SPACE_NAME"

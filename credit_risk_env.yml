@@ -1,3 +1,5 @@
+# credit_risk_env.yml
+
 channels:
   - conda-forge
 dependencies:
@@ -10,6 +12,9 @@ dependencies:
   - scipy>=1.15.2
   - psutil>=5.9.5
   - scikit-learn>=1.6.0
+  
+  # --- Model Management ---
+  - mlflow>=2.22.0
 
   # --- API & Web ---
   - fastapi

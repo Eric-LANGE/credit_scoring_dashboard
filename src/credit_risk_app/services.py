@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 
-from .preprocessing import apply_transformations_for_model
+from .preprocessing import apply_transformations
 from .config import COLUMNS_TO_IMPORT
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class InferenceService:
         start = time.time()
 
         # Apply preprocessing
-        X_processed = apply_transformations_for_model(
+        X_processed = apply_transformations(
             self.raw_data.copy(), self.expected_features
         )
 

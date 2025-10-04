@@ -1,35 +1,40 @@
-# Use a lightweight micromamba image as a base
+# Dockerfile (UPDATED)
+
 FROM mambaorg/micromamba:latest
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Set environment variables for micromamba
 ENV MAMBA_ROOT_PREFIX=/opt/conda \
     PATH=/opt/conda/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Copy the environment file and install dependencies first for better caching
+# Install dependencies
 COPY --chown=$MAMBA_USER:$MAMBA_USER credit_risk_env.yml /app/
 RUN micromamba install -y -n base -f /app/credit_risk_env.yml && \
     micromamba clean -afy --quiet
 
-# Copy the application code and data
-# Note: We are NO LONGER copying the 'models' directory
+# Copy application code
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./src /app/src
-COPY --chown=$MAMBA_USER:$MAMBA_USER ./data/dashboard_data.csv /app/data/dashboard_data.csv
+
+# ✨ NEW: Copy model directory
+COPY --chown=$MAMBA_USER:$MAMBA_USER ./models /app/models
+
+# ✨ NEW: Copy raw data (instead of dashboard_data.csv)
+COPY --chown=$MAMBA_USER:$MAMBA_USER ./data/application_test.csv /app/data/application_test.csv
+
+# Keep SHAP pre-computed (77 MB, no need to recompute)
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./shap /app/shap
+
+# Keep pre-computed histograms for distribution plots
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./plots /app/plots
 
-# Copy test files (optional, can be removed for a smaller production image)
+# Copy tests
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./tests /app/tests
 
-# Copy and set executable permissions for the entrypoint script
+# Copy entrypoint
 COPY --chown=$MAMBA_USER:$MAMBA_USER --chmod=755 entrypoint.sh /app/
 
-# Expose the public port for the Streamlit app
 EXPOSE 7860
 
-# Set the entrypoint to run the application
 ENTRYPOINT ["/app/entrypoint.sh"]

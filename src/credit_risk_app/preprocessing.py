@@ -16,6 +16,9 @@ def apply_transformations(
     """
     Orchestrates preprocessing steps on credit application data.
 
+    ⚠️ CRITICAL: This preprocessing MUST match exactly the preprocessing
+    used during model training to avoid prediction drift.
+
     Parameters:
     -----------
     df : pd.DataFrame
@@ -159,12 +162,14 @@ def _fix_region_rating(df: pd.DataFrame) -> None:
 def _standardize_categoricals(df: pd.DataFrame) -> None:
     """
     Use mapping dictionaries to make categorical values human-readable or consistent.
+
+    ⚠️ CRITICAL: CODE_GENDER XNA maps to "male" to match training preprocessing.
     """
     mappings = {
         "CODE_GENDER": {
             "M": "male",
             "F": "female",
-            "XNA": "unknown_gender",
+            "XNA": "male",  # ← PRODUCTION: Match training data preprocessing
         },
         "FLAG_OWN_CAR": {
             "Y": "yes",
@@ -209,7 +214,7 @@ def _standardize_categoricals(df: pd.DataFrame) -> None:
 
 def _engineer_ratio_features(df: pd.DataFrame) -> None:
     """
-    Create new financial ratio
+    Create new financial ratio features.
     """
     ratios = [
         ("PAYMENT_RATE", "AMT_ANNUITY", "AMT_CREDIT"),
@@ -241,34 +246,16 @@ def _engineer_ratio_features(df: pd.DataFrame) -> None:
 
 def _cast_numeric_to_float(df: pd.DataFrame) -> None:
     """
-    Ensure all numeric columns are float64
+    Cast ALL numeric columns to float64 (MLflow signature requirement).
+    Simple logic matching create_preprocessed_data.py production behavior.
     """
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
 
-    cols_casted = []
     for col in numeric_cols:
-        # Check if column is not already float64
         if df[col].dtype != "float64":
-            try:
-                if pd.api.types.is_integer_dtype(df[col]) and df[col].isnull().all():
-                    df[col] = df[col].astype("float64")
-                    cols_casted.append(f"{col} (all NaN int to float)")
-                elif not (
-                    pd.api.types.is_integer_dtype(df[col])
-                    and df[col].nunique() <= 2
-                    and df[col].min() >= 0
-                    and df[col].max() <= 1
-                ):
-                    df[col] = df[col].astype("float64")
-                    cols_casted.append(col)
-            except Exception as e:
-                logger.warning(
-                    f"Could not cast column '{col}' (dtype: {df[col].dtype}) to float64: {e}"
-                )
+            df[col] = df[col].astype("float64")
 
-    if cols_casted:
-        logger.debug(f"Casted columns to float64: {cols_casted}")
-    else:
-        logger.debug(
-            "No columns required casting to float64, or all numeric columns were already float64/handled."
-        )
+    logger.debug(
+        f"Cast {len([c for c in numeric_cols if df[c].dtype == 'float64'])} "
+        f"numeric columns to float64"
+    )

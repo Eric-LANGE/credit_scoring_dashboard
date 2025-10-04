@@ -11,7 +11,7 @@ from sklearn.metrics import (
 )
 
 # Importer la configuration pour accéder aux constantes comme FN_WEIGHT
-from config import Config
+from .config import Config
 
 # =============================================================================
 # Metric Functions

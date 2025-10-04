@@ -3,18 +3,18 @@
 channels:
   - conda-forge
 dependencies:
-  # --- Core Environment ---
-  - python>=3.12
+  # --- Core Environment (PINNED to match training) ---
+  - python=3.12.11
 
   # --- Core ML & Data Handling ---
   - pandas>=2.2.2
   - numpy>=2.0.2
   - scipy>=1.15.2
   - psutil>=5.9.5
-  - scikit-learn>=1.6.0
+  - scikit-learn=1.6.1
   
-  # --- Model Management ---
-  - mlflow>=2.22.0
+  # --- Model Management (PINNED to match model artifacts) ---
+  - mlflow=2.22.2
 
   # --- API & Web ---
   - fastapi

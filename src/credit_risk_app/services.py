@@ -6,11 +6,15 @@ import joblib
 import mlflow
 import numpy as np
 from pathlib import Path
+from sklearn import set_config
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 
 from .preprocessing import apply_transformations
 from .config import COLUMNS_TO_IMPORT
+
+# Configure sklearn to preserve pandas DataFrames throughout pipelines
+set_config(transform_output="pandas")
 
 logger = logging.getLogger(__name__)
 

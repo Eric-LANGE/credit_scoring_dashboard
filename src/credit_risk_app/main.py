@@ -6,13 +6,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException, Depends
 
-from .services import InferenceService  # ← Changed from DashboardService
+from .services import InferenceService
 
-# --- Configuration & Setup ---
+# --- Configuration & setup ---
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT_DIR = APP_DIR.parent.parent
 
-# NEW: Point to model and raw data
+# Point to model and raw data
 MODEL_PATH = PROJECT_ROOT_DIR / "models" / "gradient_boosting"
 RAW_DATA_PATH = PROJECT_ROOT_DIR / "data" / "application_test.csv"
 SHAP_EXPLANATION_PATH = PROJECT_ROOT_DIR / "shap" / "shap_explanation.joblib"
@@ -23,10 +23,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# --- Lifespan & App Initialization ---
+# --- Lifespan & app initialization ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 Application startup: Loading resources...")
+    logger.info("Application startup: loading resources...")
     try:
         service = InferenceService(
             model_path=MODEL_PATH,
@@ -34,15 +34,15 @@ async def lifespan(app: FastAPI):
             shap_explanation_path=SHAP_EXPLANATION_PATH,
         )
         app.state.inference_service = service
-        logger.info("✅ Application startup complete. Service is ready.")
+        logger.info("Application startup complete. Service is ready.")
         logger.info(
-            "ℹ️  Predictions will be computed on first dashboard request (warmup ~5-10s)"
+            "Predictions will be computed on first dashboard request (warmup ~5-10s)"
         )
     except Exception as e:
         logger.error(f"❌ Application startup failed: {e}", exc_info=True)
         app.state.inference_service = None
     yield
-    logger.info("👋 Application shutdown.")
+    logger.info("Application shutdown.")
 
 
 app = FastAPI(lifespan=lifespan, title="Credit Risk API")
@@ -54,7 +54,7 @@ def get_inference_service(request: Request) -> InferenceService:
     return request.app.state.inference_service
 
 
-# --- API Endpoints (unchanged signatures) ---
+# --- API Endpoints ---
 
 
 @app.get("/customers", tags=["Dashboard Data"])

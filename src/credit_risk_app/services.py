@@ -1,4 +1,4 @@
-# src/credit_risk_app/services.py (NEW VERSION)
+# src/credit_risk_app/services.py
 
 import logging
 import pandas as pd
@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 class InferenceService:
     """
-    Service for runtime inference with intelligent caching.
+    Service for runtime inference with caching.
 
     Strategy:
-    - Load model + raw data at startup (~150 MB memory)
+    - Load model + raw data at startup
     - Lazy preprocessing + prediction on first request (~5s warmup)
     - Cache all results in memory (instant subsequent requests)
     """
@@ -66,12 +66,11 @@ class InferenceService:
         """
         Lazy cache initialization: compute predictions on first request.
 
-        Warmup time: ~5-10s for 48k clients (one-time cost).
         """
         if self._predictions_cache is not None:
             return  # Already cached
 
-        logger.info("🔥 WARMUP: Computing predictions for all clients...")
+        logger.info("WARMUP: computing predictions for all clients...")
         import time
 
         start = time.time()
@@ -105,7 +104,7 @@ class InferenceService:
         )
 
         elapsed = time.time() - start
-        logger.info(f"✅ WARMUP COMPLETE in {elapsed:.2f}s. Cache ready.")
+        logger.info(f"WARMUP COMPLETE in {elapsed:.2f}s. Cache ready.")
 
     def get_all_customer_ids(self) -> list[int]:
         """Returns list of all customer IDs (no cache needed)."""

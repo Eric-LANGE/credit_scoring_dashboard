@@ -16,9 +16,6 @@ def apply_transformations(
     """
     Orchestrates preprocessing steps on credit application data.
 
-    ⚠️ CRITICAL: This preprocessing MUST match exactly the preprocessing
-    used during model training to avoid prediction drift.
-
     Parameters:
     -----------
     df : pd.DataFrame
@@ -163,13 +160,12 @@ def _standardize_categoricals(df: pd.DataFrame) -> None:
     """
     Use mapping dictionaries to make categorical values human-readable or consistent.
 
-    ⚠️ CRITICAL: CODE_GENDER XNA maps to "male" to match training preprocessing.
     """
     mappings = {
         "CODE_GENDER": {
             "M": "male",
             "F": "female",
-            "XNA": "male",  # ← PRODUCTION: Match training data preprocessing
+            "XNA": "male",
         },
         "FLAG_OWN_CAR": {
             "Y": "yes",
@@ -247,7 +243,6 @@ def _engineer_ratio_features(df: pd.DataFrame) -> None:
 def _cast_numeric_to_float(df: pd.DataFrame) -> None:
     """
     Cast ALL numeric columns to float64 (MLflow signature requirement).
-    Simple logic matching create_preprocessed_data.py production behavior.
     """
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
 

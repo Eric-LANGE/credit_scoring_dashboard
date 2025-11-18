@@ -122,8 +122,6 @@ def roc_auc_metric(y_true, y_pred_proba) -> float:
 
 def get_scoring_dict() -> Dict[str, Callable]:
     """Create a complete scoring dictionary for model evaluation."""
-    # Note: 'response_method' est l'API moderne (>=1.2) et préférée à 'needs_proba'.
-    # 'predict' est la valeur par défaut pour les métriques basées sur les classes.
     return {
         # Methods using standard predictions
         "tn": make_scorer(tn_metric, response_method="predict"),

@@ -33,7 +33,7 @@ plt.rcParams.update(
 )
 
 
-# --- API & Data Communication Functions ---
+# --- API & data communication functions ---
 @st.cache_data(ttl=3600)
 def get_customer_ids():
     try:
@@ -48,7 +48,6 @@ def get_customer_ids():
 def get_api_data_for_customer(customer_id):
     """
     Fetch all dashboard data for a customer using the composite endpoint.
-    Optimized: Single HTTP request instead of 3 parallel requests (~60% latency reduction).
     """
     try:
         response = requests.get(f"{API_URL}/customer/{customer_id}/dashboard")
@@ -88,7 +87,7 @@ def load_distribution_data(feature_name):
         return None
 
 
-# --- Image & Layout Stabilization Helpers ---
+# --- Image & layout stabilization helpers ---
 @st.cache_data(show_spinner=False)
 def load_image_file_bytes(path_str: str) -> bytes:
     p = Path(path_str)
@@ -149,7 +148,7 @@ def _inject_stable_css_once():
 
 def render_png_in_stable_box(img_bytes: bytes, size: str = "medium"):
     """
-    Rend l'image *à l'intérieur* de la boîte stable en un seul bloc,
+    Rend l'image à l'intérieur de la boîte stable en un seul bloc,
     pour éviter la fragmentation DOM au 1er rendu.
     """
     _inject_stable_css_once()
@@ -166,7 +165,7 @@ def render_png_in_stable_box(img_bytes: bytes, size: str = "medium"):
     )
 
 
-# --- Plot Generation Functions ---
+# --- Plot generation functions ---
 def create_shap_waterfall_plot(plot_data):
     if plot_data is None:
         return None
@@ -341,7 +340,7 @@ def create_matplotlib_gauge(value: float, threshold: float, decision: str):
     return fig
 
 
-# --- UI Display Functions ---
+# --- UI display functions ---
 def display_score_and_features(api_data, customer_id):
     st.header(f"Analyse Client : {customer_id}")
     score_data = api_data.get("score_data")
@@ -380,14 +379,14 @@ def display_score_and_features(api_data, customer_id):
 
 
 def display_shap_importance(api_data):
-    st.header("Contribution des Caractéristiques au Score")
+    st.header("Contribution des caractéristiques au score")
     col_g, col_l = st.columns([1.15, 1])
     with col_g:
-        st.subheader("Importance Globale")
+        st.subheader("Importance globale")
         beeswarm_bytes = load_image_file_bytes(str(SHAP_IMAGE_PATH))
         render_png_in_stable_box(beeswarm_bytes, size="medium")
     with col_l:
-        st.subheader("Importance Locale")
+        st.subheader("Importance locale")
         with st.spinner("Génération du graphique SHAP..."):
             shap_data = api_data.get("shap_values")
             if shap_data:
@@ -401,12 +400,12 @@ def display_shap_importance(api_data):
 
 
 def display_customer_positioning(customer_features):
-    st.header("Positionnement du Client")
+    st.header("Positionnement du client")
     features_to_plot = list(customer_features.keys())
     col_dist, col_bi = st.columns(2)
 
     with col_dist:
-        st.subheader("Distribution d'une Caractéristique")
+        st.subheader("Distribution d'une caractéristique")
         feature_dist = st.selectbox("Caractéristique", features_to_plot, key="dist")
         if feature_dist:
             hist_data = load_distribution_data(feature_dist)
@@ -447,7 +446,7 @@ def fig_to_bytes(fig):
 
 
 # --- Main Application Logic ---
-st.title("Dashboard d'Analyse de Risque de Crédit")
+st.title("Dashboard d'analyse de risque de crédit")
 
 customer_ids = get_customer_ids()
 if not customer_ids:

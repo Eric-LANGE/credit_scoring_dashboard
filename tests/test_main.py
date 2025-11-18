@@ -1,4 +1,4 @@
-# tests/test_main.py (UPDATED)
+# tests/test_main.py
 
 import pytest
 from fastapi.testclient import TestClient

@@ -1,4 +1,4 @@
-# Dockerfile (UPDATED)
+# Dockerfile
 
 FROM mambaorg/micromamba:latest
 
@@ -17,16 +17,16 @@ RUN micromamba install -y -n base -f /app/credit_risk_env.yml && \
 # Copy application code
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./src /app/src
 
-# ✨ NEW: Copy model directory
+# Copy model directory
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./models /app/models
 
-# ✨ NEW: Copy raw data (instead of dashboard_data.csv)
+# Copy raw data
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./data/application_test.csv /app/data/application_test.csv
 
-# Keep SHAP pre-computed (77 MB, no need to recompute)
+# SHAP pre-computed
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./shap /app/shap
 
-# Keep pre-computed histograms for distribution plots
+# Pre-computed histograms for distribution plots
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./plots /app/plots
 
 # Copy tests

@@ -142,7 +142,21 @@ This file contains unprocessed customer applications from the "Home Credit Defau
 
 **Note**: Large files (`.csv`, `.joblib`, `.png`, `.pkl`) are managed via Git LFS as specified in `.gitattributes`.
 
+### Testing
 
+The project includes automated tests:
+```bash
+# Run tests locally
+pytest tests/
+
+# Run tests in Docker (matches CI/CD)
+docker run --rm --entrypoint pytest credit-risk-app:latest tests/
+```
+
+Tests cover:
+- API endpoint responses
+- Service layer caching behavior
+- Mock-based isolation of InferenceService
 
 ### Critical Development Notes
 

@@ -342,14 +342,14 @@ def create_matplotlib_gauge(value: float, threshold: float, decision: str):
 
 # --- UI display functions ---
 def display_score_and_features(api_data, customer_id):
-    st.header(f"Analyse Client : {customer_id}")
+    st.header(f"Client : {customer_id}")
     score_data = api_data.get("score_data")
     customer_features = api_data.get("features")
     score = (1 - score_data["probability_pos"]) * 100
 
     col1, col2 = st.columns([1.15, 1])
     with col1:
-        st.subheader("Score de Crédit")
+        st.subheader("Score de crédit")
         gauge_threshold = (1 - score_data["threshold"]) * 100
         fig_g = create_matplotlib_gauge(
             value=score, threshold=gauge_threshold, decision=score_data["decision"]
@@ -357,7 +357,7 @@ def display_score_and_features(api_data, customer_id):
         render_png_in_stable_box(fig_to_bytes(fig_g), size="large")
 
     with col2:
-        st.subheader("Caractéristiques Principales")
+        st.subheader("Caractéristiques principales")
         html_metrics = ""
         for feature, value in customer_features.items():
             if feature in ["DAYS_EMPLOYED", "OWN_CAR_AGE"] and pd.notna(value):
@@ -422,7 +422,7 @@ def display_customer_positioning(customer_features):
                 st.error("Impossible de charger les données de distribution.")
 
     with col_bi:
-        st.subheader("Analyse Bi-variée")
+        st.subheader("Analyse bi-variée")
         col_x, col_y = st.columns(2)
         feat_x = col_x.selectbox("Axe X", features_to_plot, index=0, key="bx")
         feat_y = col_y.selectbox("Axe Y", features_to_plot, index=1, key="by")

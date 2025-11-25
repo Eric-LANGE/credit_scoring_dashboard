@@ -229,7 +229,7 @@ def create_distribution_plot(counts, bin_edges, median_val, client_value, featur
         ax.axvline(
             median_val,
             color="black",
-            linestyle="_.",
+            linestyle="dashdot",
             linewidth=2,
             label=f"Median: {_fmt_val(median_val)}",
         )
@@ -237,7 +237,7 @@ def create_distribution_plot(counts, bin_edges, median_val, client_value, featur
         ax.axvline(
             client_value,
             color="red",
-            linestyle="-",
+            linestyle="solid",
             lw=3,
             label=f"Client : {_fmt_val(client_value)}",
         )

@@ -55,6 +55,7 @@ The application consists of three main components:
 2. **FastAPI API layer:**
    - exposes RESTful endpoints for customer data, scores, and SHAP values
    - composite endpoint (`/customer/{id}/dashboard`) fetches all data in one request
+   - serves static assets (SHAP plots, distribution data) with HTTP caching
    - automatic OpenAPI documentation at `/docs`
 
 3. **Streamlit frontend:**
@@ -115,8 +116,27 @@ The FastAPI backend (`http://localhost:8000`) exposes:
 
 #### Primary endpoints
 
-- **`GET /customers`**: returns all available customer IDs
-- **`GET /customer/{customer_id}/dashboard`**: fetches all dashboard data (score, features, SHAP) in a single request
+- **`GET /customers`**: returns all available customer IDs.
+- **`GET /customer/{customer_id}/dashboard`**: composite endpoint fetching all dashboard data (score, features, SHAP) in a single request. First call triggers warmup (~5-10s).
+
+#### Widget endpoints
+
+- **`GET /customer/{customer_id}/score`**: returns score data for the gauge widget.
+  - Response: `{ "probability_pos": float, "threshold": float, "decision": "accepted"|"refused" }`
+- **`GET /customer/{customer_id}/features`**: returns the 4 main dashboard features.
+  - Response: `{ "EXT_SOURCE_3": float|null, "EXT_SOURCE_2": float|null, "DAYS_EMPLOYED": int|null, "OWN_CAR_AGE": int|null }`
+- **`GET /customer/{customer_id}/shap`**: returns local SHAP values for the waterfall plot.
+  - Response: `{ "base_value": float, "values": float[], "feature_names": string[] }`
+- **`GET /features/bivariate_data?feat_x={feature}&feat_y={feature}`**: returns scatter plot data for bivariate analysis.
+  - Response: `{ "x_data": float[], "y_data": float[] }`
+
+#### Static assets endpoints
+
+- **`GET /shap/global`**: returns the pre-computed global SHAP beeswarm plot (PNG image).
+  - Response: `image/png` with `Cache-Control: public, max-age=86400`
+- **`GET /features/{feature_name}/distribution`**: returns pre-computed histogram data for a feature.
+  - Available features: `EXT_SOURCE_2`, `EXT_SOURCE_3`, `DAYS_EMPLOYED`, `OWN_CAR_AGE`
+  - Response: `{ "feature": string, "counts": int[], "bin_edges": float[], "median": float }`
 
 **API documentation**: visit `http://localhost:8000/docs` for interactive Swagger UI
 
@@ -129,12 +149,12 @@ This file contains unprocessed customer applications from the "Home Credit Defau
 - preprocessing is applied at runtime using `preprocessing.py`
 - the preprocessing pipeline **must match training exactly** to prevent prediction drift
 - critical preprocessing steps include:
-  - placeholder replacement (e.g., DAYS_EMPLOYED = 365243 → NaN)
-  - missing value imputation
-  - time column conversion (negative days → absolute values)
-  - categorical standardization (e.g., CODE_GENDER XNA → "male")
-  - feature engineering (5 financial ratios)
-  - type casting (all numeric columns → float64 for MLflow compatibility)
+- placeholder replacement (e.g., DAYS_EMPLOYED = 365243 → NaN)
+- missing value imputation
+- time column conversion (negative days → absolute values)
+- categorical standardization (e.g., CODE_GENDER XNA → "male")
+- feature engineering (5 financial ratios)
+- type casting (all numeric columns → float64 for MLflow compatibility)
 
 **Pre-computed artifacts:**
 - **SHAP explanations** (`shap/shap_explanation.joblib`, 93 MB): generated once during model training

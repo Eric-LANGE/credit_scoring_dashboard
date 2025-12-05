@@ -1,20 +1,13 @@
 import streamlit as st
 import requests
 import io
-import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import shap
-from pathlib import Path
 import base64
 
 # --- Constants ---
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent
-SHAP_IMAGE_PATH = PROJECT_ROOT / "shap" / "shap_beeswarm.png"
-PLOTS_DIR = PROJECT_ROOT / "plots"
-
 st.set_page_config(layout="wide", page_title="Dashboard Score Crédit")
 
 API_URL = "http://127.0.0.1:8000"
@@ -77,24 +70,30 @@ def get_bivariate_data_from_api(feat_x, feat_y):
         return None
 
 
-@st.cache_data(ttl=3600)
-def load_distribution_data(feature_name):
-    file_path = PLOTS_DIR / f"{feature_name}_hist_data.json"
+@st.cache_data(ttl=86400)
+def get_distribution_data_from_api(feature_name):
+    """Fetch histogram distribution data from API."""
     try:
-        with open(file_path, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+        response = requests.get(f"{API_URL}/features/{feature_name}/distribution")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException:
+        return None
+
+
+@st.cache_data(ttl=86400)
+def get_global_shap_image():
+    """Fetch global SHAP beeswarm plot from API."""
+    try:
+        response = requests.get(f"{API_URL}/shap/global")
+        response.raise_for_status()
+        return response.content
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to load global SHAP plot: {e}")
         return None
 
 
 # --- Image & layout stabilization helpers ---
-@st.cache_data(show_spinner=False)
-def load_image_file_bytes(path_str: str) -> bytes:
-    p = Path(path_str)
-    with open(p, "rb") as f:
-        return f.read()
-
-
 def _inject_stable_css_once():
     if st.session_state.get("_stable_css_injected"):
         return
@@ -383,8 +382,11 @@ def display_shap_importance(api_data):
     col_g, col_l = st.columns([1.15, 1])
     with col_g:
         st.subheader("Importance globale")
-        beeswarm_bytes = load_image_file_bytes(str(SHAP_IMAGE_PATH))
-        render_png_in_stable_box(beeswarm_bytes, size="medium")
+        beeswarm_bytes = get_global_shap_image()
+        if beeswarm_bytes:
+            render_png_in_stable_box(beeswarm_bytes, size="medium")
+        else:
+            st.error("Impossible de charger le graphique SHAP global.")
     with col_l:
         st.subheader("Importance locale")
         with st.spinner("Génération du graphique SHAP..."):
@@ -408,7 +410,7 @@ def display_customer_positioning(customer_features):
         st.subheader("Distribution d'une caractéristique")
         feature_dist = st.selectbox("Caractéristique", features_to_plot, key="dist")
         if feature_dist:
-            hist_data = load_distribution_data(feature_dist)
+            hist_data = get_distribution_data_from_api(feature_dist)
             if hist_data:
                 fig_dist = create_distribution_plot(
                     np.array(hist_data["counts"]),
@@ -445,7 +447,7 @@ def fig_to_bytes(fig):
     return buf.getvalue()
 
 
-# --- Main Application Logic ---
+# --- Main application logic ---
 st.title("Dashboard d'analyse de risque de crédit")
 
 customer_ids = get_customer_ids()

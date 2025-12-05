@@ -123,6 +123,7 @@ async def get_bivariate_data(
 
 # --- Static Assets Endpoints ---
 
+
 @app.get("/shap/global", tags=["Static Assets"])
 async def get_global_shap_plot():
     """

@@ -1,8 +1,8 @@
 ---
 title: Credit Risk Dashboard
-emoji: 📊📊
-colorFrom: blue
-colorTo: green
+emoji: 📊
+colorFrom: orange
+colorTo: red
 sdk: docker
 pinned: false
 port: 7860

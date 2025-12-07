@@ -17,12 +17,10 @@ from pathlib import Path
 # Repository IDs (format: "username/repo-name")
 # Override via environment variables in HF Space settings
 HF_MODEL_REPO_ID = os.environ.get(
-    "HF_MODEL_REPO_ID",
-    "YOUR_USERNAME/credit-risk-dashboard-model"
+    "HF_MODEL_REPO_ID", "YOUR_USERNAME/credit-risk-dashboard-model"
 )
 HF_DATA_REPO_ID = os.environ.get(
-    "HF_DATA_REPO_ID",
-    "YOUR_USERNAME/credit-risk-dashboard-data"
+    "HF_DATA_REPO_ID", "YOUR_USERNAME/credit-risk-dashboard-data"
 )
 
 # Subdirectory within model repo containing the MLflow model
@@ -126,6 +124,7 @@ DISTRIBUTION_FEATURES = frozenset(
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def get_model_path() -> Path:
     """Return path to the MLflow model directory."""

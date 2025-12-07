@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 # HF HUB ASSET MANAGER (NEW)
 # =============================================================================
 
+
 class HFHubAssetManager:
     """
     Manages downloading assets from HuggingFace Hub repositories.
@@ -71,15 +72,15 @@ class HFHubAssetManager:
         shutil.copytree(model_source, config.LOCAL_MODEL_DIR)
 
         elapsed = time.time() - start
-        logger.info(f"    Model downloaded in {elapsed:.2f}s -> {config.LOCAL_MODEL_DIR}")
+        logger.info(
+            f"    Model downloaded in {elapsed:.2f}s -> {config.LOCAL_MODEL_DIR}"
+        )
 
         return config.LOCAL_MODEL_DIR
 
     @staticmethod
     def download_data_file(
-        filename: str,
-        subfolder: Optional[str] = None,
-        local_dir: Optional[Path] = None
+        filename: str, subfolder: Optional[str] = None, local_dir: Optional[Path] = None
     ) -> Path:
         """
         Download a single file from the data repository.
@@ -129,19 +130,18 @@ class HFHubAssetManager:
         paths["model"] = cls.download_model()
 
         # 2. Download raw data
-        logger.info(f"[2/4] Downloading raw data...")
+        logger.info("[2/4] Downloading raw data...")
         paths["data"] = cls.download_data_file(
-            config.RAW_DATA_FILENAME,
-            local_dir=config.LOCAL_DATA_DIR
+            config.RAW_DATA_FILENAME, local_dir=config.LOCAL_DATA_DIR
         )
         logger.info(f"    -> {paths['data']}")
 
         # 3. Download SHAP files
-        logger.info(f"[3/4] Downloading SHAP files...")
+        logger.info("[3/4] Downloading SHAP files...")
         paths["shap"] = cls.download_data_file(
             config.SHAP_EXPLANATION_FILENAME,
             subfolder="shap",
-            local_dir=config.LOCAL_SHAP_DIR
+            local_dir=config.LOCAL_SHAP_DIR,
         )
         logger.info(f"    -> {paths['shap']}")
 
@@ -150,21 +150,21 @@ class HFHubAssetManager:
             cls.download_data_file(
                 config.SHAP_BEESWARM_FILENAME,
                 subfolder="shap",
-                local_dir=config.LOCAL_SHAP_DIR
+                local_dir=config.LOCAL_SHAP_DIR,
             )
-            logger.info(f"    -> {config.LOCAL_SHAP_DIR / config.SHAP_BEESWARM_FILENAME}")
+            logger.info(
+                f"    -> {config.LOCAL_SHAP_DIR / config.SHAP_BEESWARM_FILENAME}"
+            )
         except Exception as e:
             logger.warning(f"    Could not download SHAP beeswarm: {e}")
 
         # 4. Download plot JSON files
-        logger.info(f"[4/4] Downloading plot files...")
+        logger.info("[4/4] Downloading plot files...")
         paths["plots"] = []
         for plot_file in config.PLOT_FILENAMES:
             try:
                 plot_path = cls.download_data_file(
-                    plot_file,
-                    subfolder="plots",
-                    local_dir=config.LOCAL_PLOTS_DIR
+                    plot_file, subfolder="plots", local_dir=config.LOCAL_PLOTS_DIR
                 )
                 paths["plots"].append(plot_path)
             except Exception as e:
@@ -183,6 +183,7 @@ class HFHubAssetManager:
 # INFERENCE SERVICE (ORIGINAL FUNCTIONALITY PRESERVED)
 # =============================================================================
 
+
 class InferenceService:
     """
     Service for runtime inference with caching.
@@ -199,7 +200,7 @@ class InferenceService:
         model_path: Optional[Path] = None,
         raw_data_path: Optional[Path] = None,
         shap_explanation_path: Optional[Path] = None,
-        download_from_hub: bool = True
+        download_from_hub: bool = True,
     ):
         """
         Initialize the inference service.
@@ -217,7 +218,9 @@ class InferenceService:
         # Set paths (use provided or defaults from config)
         model_path = model_path or config.LOCAL_MODEL_DIR
         raw_data_path = raw_data_path or config.get_raw_data_path()
-        shap_explanation_path = shap_explanation_path or config.get_shap_explanation_path()
+        shap_explanation_path = (
+            shap_explanation_path or config.get_shap_explanation_path()
+        )
 
         # 1. Load MLflow model
         logger.info(f"Loading MLflow model from {model_path}...")

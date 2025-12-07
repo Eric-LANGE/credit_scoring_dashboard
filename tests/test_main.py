@@ -129,7 +129,9 @@ def test_get_bivariate_data(client):
         "y_data": [4.0, 5.0, 6.0],
     }
 
-    response = client.get("/features/bivariate_data?feat_x=EXT_SOURCE_2&feat_y=EXT_SOURCE_3")
+    response = client.get(
+        "/features/bivariate_data?feat_x=EXT_SOURCE_2&feat_y=EXT_SOURCE_3"
+    )
     assert response.status_code == 200
     data = response.json()
     assert "x_data" in data

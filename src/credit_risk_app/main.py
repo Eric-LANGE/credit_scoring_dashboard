@@ -9,7 +9,6 @@ import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse

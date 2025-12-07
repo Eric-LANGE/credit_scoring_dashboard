@@ -1,0 +1,104 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- Python quality checks (host environment, not Docker) ---
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install linting and formatting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black
+
+      - name: Lint with flake8
+        run: |
+          echo "Running flake8 linter..."
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Check formatting with black
+        run: |
+          echo "Checking code formatting with black..."
+          black --check .
+
+      # --- Verify no large files in repo ---
+      - name: Check for directories that should be on HF Hub
+        run: |
+          echo "Checking for directories that should be on HF Hub..."
+          LARGE_DIRS="data models shap plots"
+          HAS_ERROR=0
+          for dir in $LARGE_DIRS; do
+            if [ -d "$dir" ] && [ "$(ls -A $dir 2>/dev/null)" ]; then
+              echo "ERROR: Directory '$dir' contains files but should be on HF Hub!"
+              HAS_ERROR=1
+            fi
+          done
+          if [ $HAS_ERROR -eq 1 ]; then
+            echo "Please remove these directories from git and upload to HF Hub."
+            exit 1
+          fi
+          echo "✓ No large asset directories found in repo"
+
+      # --- Docker build + test (uses micromamba base-env image) ---
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: credit-risk-app:latest
+          provenance: false
+
+      - name: Run tests using the built image
+        run: |
+          echo "Running pytest inside Docker container (override ENTRYPOINT)..."
+          docker run --rm \
+            --entrypoint pytest \
+            -e PYTHONPATH=/app:/app/src \
+            credit-risk-app:latest \
+            tests/
+
+  deploy-to-spaces:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: false  # No LFS needed - assets are on HF Hub
+
+      - name: Push to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+        run: |
+          SPACE_NAME="credit_scoring_dashboard_refactored"
+          GIT_BRANCH="main"
+
+          # Securely configure git credentials to avoid exposing the token in logs
+          git config --global credential.helper store
+          echo "https://user:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
+
+          echo "Pushing to Hugging Face Space: $HF_USERNAME/$SPACE_NAME"
+          git push "https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME" "$GIT_BRANCH" --force

@@ -1,0 +1,78 @@
+# ─── Assets (stored on HF Hub, not in Git) ─────
+data/
+models/
+shap/
+plots/
+
+# ─── Python Bytecode ─────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ─── Virtual Environments ──────────────────────
+venv/
+.venv/
+env/
+
+# ─── Conda / Pipenv / Poetry ───────────────────
+Pipfile.lock
+.poetry/
+
+# ─── Distribution / Packaging ──────────────────
+.Python
+build/
+dist/
+eggs/
+.eggs/
+wheels/
+share/python-wheels/
+pip-wheel-metadata/
+*.egg
+*.egg-info/
+MANIFEST
+
+# ─── C Extensions & Docs ───────────────────────
+*.so
+_docs/_build/
+
+# ─── Testing & Coverage ────────────────────────
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.pyre/
+
+# ─── IDEs & Editors ────────────────────────────
+.vscode/
+.idea/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ─── OS Files ──────────────────────────────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.ipynb_checkpoints/
+
+# ─── Logs & Temporary ──────────────────────────
+*.log
+*.tmp
+*.prof
+
+# ─── Sensitive / Environment ───────────────────
+.env
+secrets.yaml
+
+# ─── Large Data (NOT using Git LFS anymore) ────
+# Assets are now on HF Hub, not in this repo

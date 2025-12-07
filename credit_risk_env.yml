@@ -1,0 +1,38 @@
+# credit_risk_env.yml
+
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12.*
+
+  # --- Core ML & data handling ---
+  - pandas>=2.2.2
+  - numpy>=2.0.2
+  - scipy>=1.15.2
+  - psutil>=5.9.5
+  - scikit-learn=1.6.*
+
+  # --- Model Management ---
+  - mlflow=2.22.*
+
+  # --- API & web ---
+  - fastapi
+  - uvicorn[standard]
+  - streamlit
+  - plotly
+  - jinja2
+  - anyio
+  - pydantic
+
+  # --- Model interpretation ---
+  - matplotlib
+  - shap
+
+  # --- HuggingFace Hub integration (NEW) ---
+  - huggingface_hub>=0.20.0
+
+  # --- Development & testing ---
+  - pytest
+  - httpx
+  - black
+  - flake8
